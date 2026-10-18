@@ -196,7 +196,7 @@ footer{color:var(--muted);font-size:.85rem;text-align:center}
   </div>
 
   <section class="panel red" aria-labelledby="h-game">
-    <h2 id="h-game">Server Details</h2>
+    <h2 id="h-game">SMP details</h2>
     <p class="intro" id="intro"></p>
     <span class="label">Four gametypes available</span>
     <ul class="modes" id="modes"></ul>
@@ -345,31 +345,56 @@ function render(state, o) {
   }
 }
 
-/* Ping the server through the public status API */
+/* Ping the server through two public status APIs. Online if either says online. */
+const target = CONFIG.port === 25565 ? CONFIG.host : full;   /* default port: let the API follow SRV records */
+const SLEEP_HINT = /offline|join to start|starting|sleep|not running/i;
+
+async function getJSON(url) {
+  const ctl = new AbortController();
+  const t = setTimeout(function () { ctl.abort(); }, 8000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal, cache: "no-store" });
+    if (!r.ok) throw new Error("status " + r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+function fromSrvstat(d) {
+  if (!d || typeof d.online !== "boolean") return null;
+  const p = d.players || {};
+  const motd = d.motd && d.motd.clean ? d.motd.clean.join(" ") : "";
+  return { online: d.online, count: p.online || 0, max: p.max,
+    names: Array.isArray(p.list) ? p.list.map(function (x) { return String(x.name); }) : [],
+    version: d.version, motd: motd };
+}
+function fromMcstatus(d) {
+  if (!d || typeof d.online !== "boolean") return null;
+  const p = d.players || {};
+  return { online: d.online, count: p.online || 0, max: p.max,
+    names: Array.isArray(p.list) ? p.list.map(function (x) { return String(x.name_clean || x.name_raw || ""); }).filter(Boolean) : [],
+    version: d.version && d.version.name_clean, motd: d.motd && d.motd.clean || "" };
+}
+
 let busy = false;
 async function load() {
   if (busy) return; busy = true;
   const btn = $("refresh"); btn.disabled = true; btn.textContent = "Checking...";
-  let timer;
   try {
-    const ctl = new AbortController();
-    timer = setTimeout(function () { ctl.abort(); }, 8000);
-    const res = await fetch("https://api.mcsrvstat.us/3/" + encodeURIComponent(full), { signal: ctl.signal, cache: "no-store" });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error("status " + res.status);
-    const d = await res.json();
-    if (d.online) {
-      const p = d.players || {};
-      render("online", {
-        online: p.online || 0, max: p.max,
-        names: Array.isArray(p.list) ? p.list.map(function (x) { return String(x.name); }) : [],
-        version: d.version
-      });
+    const results = await Promise.all([
+      getJSON("https://api.mcsrvstat.us/3/" + encodeURIComponent(target)).then(fromSrvstat).catch(function () { return null; }),
+      getJSON("https://api.mcstatus.io/v2/status/java/" + encodeURIComponent(target)).then(fromMcstatus).catch(function () { return null; })
+    ]);
+    const ok = results.filter(Boolean);
+    if (!ok.length) { render("unknown"); return; }          /* both services failed: do not claim Sleeping */
+    const up = ok.filter(function (r) { return r.online; });
+    /* A host that answers with a placeholder "offline / join to start" MOTD is really asleep */
+    const real = up.filter(function (r) { return !(SLEEP_HINT.test(r.motd || "") || SLEEP_HINT.test(r.version || "")); });
+    if (real.length) {
+      const best = real.sort(function (a, b) { return b.names.length - a.names.length || b.count - a.count; })[0];
+      render("online", { online: best.count, max: best.max, names: best.names, version: best.version });
     } else {
-      render("sleeping");   /* offline or host asleep: never show the provider's own message */
+      render("sleeping");
     }
   } catch (e) {
-    clearTimeout(timer);
     render("unknown");
   } finally {
     busy = false; btn.disabled = false; btn.textContent = "Check now";
