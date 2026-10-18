@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pillars of Fortune</title>
-<meta name="description" content="Spawn on a bedrock pillar, get random items and outlast everyone.">
+<meta name="description" content="Spawn on a bedrock pillar, loot random items and outlast everyone.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -58,26 +58,27 @@ body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--font-bod
 /* Gallery carousel */
 .shot{margin:0;border:2px solid var(--shadow);box-shadow:6px 6px 0 var(--shadow);background:var(--surface);position:relative;overflow:hidden;line-height:1.3;user-select:none;touch-action:pan-y}
 .shot[hidden]{display:none}
-.stage{position:relative;aspect-ratio:2/1;max-height:520px;width:100%;background:var(--bg);overflow:hidden}
+.stage{position:relative;aspect-ratio:var(--ratio,2/1);width:100%;background:var(--bg);overflow:hidden}
 .slide{position:absolute;inset:0;opacity:0;transition:opacity 1.1s ease;pointer-events:none}
 .slide.on{opacity:1;z-index:1}
-.slide img{display:block;width:100%;height:100%;object-fit:cover;transform:scale(1.02);transform-origin:var(--ox,50%) var(--oy,50%)}
+.slide img{display:block;width:100%;height:100%;object-fit:cover;transform:scale(1);transform-origin:var(--ox,50%) var(--oy,50%)}
 .slide.on img{animation:kb var(--dur,6s) ease-out forwards}
-@keyframes kb{from{transform:scale(1.02)}to{transform:scale(1.13)}}
-.shot figcaption{position:absolute;inset:auto 0 0 0;z-index:2;padding:48px 18px 20px;color:#fff;pointer-events:none;
-  background:linear-gradient(transparent,rgba(5,15,43,.85));font:500 1.15rem var(--font-display)}
-.shot figcaption span{display:inline-block;animation:capin .7s .25s both cubic-bezier(.2,.8,.2,1)}
-@keyframes capin{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-.nav{position:absolute;top:50%;z-index:3;transform:translateY(-50%);width:44px;height:44px;display:grid;place-items:center;
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.05)}}
+.shot figcaption{position:absolute;left:0;right:0;bottom:4px;z-index:6;padding:56px 20px 18px;color:#fff;pointer-events:none;
+  background:linear-gradient(transparent,rgba(5,15,43,.88));font:500 clamp(1.05rem,2.2vw,1.5rem)/1.3 var(--font-display);text-shadow:0 2px 6px rgba(0,0,0,.7)}
+.shot figcaption:empty{display:none}
+.shot figcaption span{display:block;max-width:calc(100% - 120px);opacity:0;transform:translateY(12px);transition:opacity .6s .2s,transform .6s .2s cubic-bezier(.2,.8,.2,1)}
+.shot figcaption span.in{opacity:1;transform:none}
+.nav{position:absolute;top:50%;z-index:7;transform:translateY(-50%);width:44px;height:44px;display:grid;place-items:center;
   background:rgba(5,15,43,.55);color:#fff;border:2px solid #fff;font:700 1.5rem/1 var(--font-display);cursor:pointer;opacity:0;transition:opacity .2s,background .15s}
 .shot:hover .nav,.nav:focus-visible{opacity:1}
 .nav:hover{background:var(--accent);color:var(--accent-fg)}
 .nav.prev{left:12px}.nav.next{right:12px}
 @media (hover:none){.nav{opacity:.85;width:38px;height:38px}}
-.dots{position:absolute;right:16px;bottom:16px;z-index:3;display:flex;gap:8px}
+.dots{position:absolute;right:16px;bottom:20px;z-index:7;display:flex;gap:8px}
 .dots button{width:12px;height:12px;padding:0;border:2px solid #fff;background:transparent;cursor:pointer;transition:transform .2s,background .2s}
 .dots button.on{background:#fff;transform:scale(1.25)}
-.prog{position:absolute;left:0;right:0;bottom:0;height:4px;z-index:3;background:rgba(255,255,255,.2)}
+.prog{position:absolute;left:0;right:0;bottom:0;height:4px;z-index:7;background:rgba(255,255,255,.2)}
 .prog b{display:block;height:100%;width:0;background:var(--lime)}
 .shot.single .nav,.shot.single .dots,.shot.single .prog{display:none}
 
@@ -219,7 +220,7 @@ footer{color:var(--muted);font-size:.85rem;text-align:center}
   </div>
 
   <section class="panel red" aria-labelledby="h-game">
-    <h2 id="h-game">Server details</h2>
+    <h2 id="h-game">SMP details</h2>
     <p class="intro" id="intro"></p>
     <span class="label">Four gametypes available</span>
     <ul class="modes" id="modes"></ul>
@@ -294,7 +295,7 @@ $("listing-link").href = CONFIG.listing;
 /* Gallery carousel: preloads every image, drops any that fail, then rotates */
 (function () {
   const shot = $("shot"), stage = $("stage"), cap = $("cap"), dots = $("dots"), prog = $("prog");
-  const origins = [["20%","30%"],["80%","70%"],["50%","20%"],["30%","80%"],["70%","30%"]];
+  const origins = [["50%","50%"],["40%","55%"],["60%","45%"],["50%","60%"],["50%","40%"]];
   const ms = CONFIG.gallerySeconds * 1000;
   let slides = [], idx = 0, elapsed = 0, last = 0, hover = false;
 
@@ -320,6 +321,7 @@ $("listing-link").href = CONFIG.listing;
       dots.append(d);
       slides.push({ el: el, d: d, caption: it.g.caption || "" });
     });
+    if (list[0].img.naturalWidth) stage.style.setProperty("--ratio", list[0].img.naturalWidth + "/" + list[0].img.naturalHeight);
     shot.hidden = false;
     if (slides.length === 1) { shot.classList.add("single"); show(0); return; }
     show(0); requestAnimationFrame(tick);
@@ -340,7 +342,7 @@ $("listing-link").href = CONFIG.listing;
   function show(i) {
     slides.forEach(function (s, n) { s.el.classList.toggle("on", n === i); s.d.classList.toggle("on", n === i); });
     const c = document.createElement("span"); c.textContent = slides[i].caption;
-    cap.textContent = ""; cap.append(c);
+    cap.textContent = ""; cap.append(c); requestAnimationFrame(function () { requestAnimationFrame(function () { c.classList.add("in"); }); });
     idx = i; elapsed = 0; prog.style.width = "0%";
   }
   function go(i) { show((i + slides.length) % slides.length); }
