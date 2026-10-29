@@ -10,6 +10,10 @@
 <link rel="icon" type="image/png" sizes="192x192" href="favicon/android-chrome-192x192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
 <meta name="theme-color" content="#1c3fd1">
+<meta property="og:title" content="Pillars of Fortune">
+<meta property="og:description" content="Spawn on a bedrock pillar, loot random items and outlast everyone.">
+<meta property="og:type" content="website">
+<script>document.documentElement.classList.add("js");try{var t=localStorage.getItem("pof-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -154,6 +158,41 @@ body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--font-bod
 .discord p{margin:4px 0 0;color:var(--muted)}
 footer{color:var(--muted);font-size:.85rem;text-align:center}
 
+/* Skip link, floating blocks, reveal */
+.skip{position:absolute;left:12px;top:-60px;z-index:20;background:var(--accent);color:var(--accent-fg);padding:10px 16px;font-weight:600;text-decoration:none}
+.skip:focus{top:12px}
+.wrap{position:relative;z-index:1}
+.blocks{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.blocks i{position:absolute;bottom:-60px;width:var(--s);height:var(--s);background:var(--c);opacity:.16;animation:rise var(--d) linear infinite;animation-delay:var(--dl)}
+@keyframes rise{to{transform:translateY(-115vh) rotate(180deg)}}
+.js .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
+.js .reveal.in{opacity:1;transform:none}
+
+/* Header extras */
+.topright{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.theme{font-family:var(--font-mono);padding:8px 12px;box-shadow:3px 3px 0 var(--shadow);background:var(--surface)}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+.btn.big{font-size:1rem;padding:12px 20px;box-shadow:4px 4px 0 var(--shadow)}
+.btn.big:active{box-shadow:1px 1px 0 var(--shadow)}
+.btn.ghost{background:var(--surface);box-shadow:4px 4px 0 var(--shadow)}
+
+/* Mode stripes */
+.modes li{position:relative;padding-top:20px}
+.modes li::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:var(--stripe,var(--accent))}
+
+/* FAQ */
+.faq{display:flex;flex-direction:column;gap:10px}
+.faq details{background:var(--bg);border:2px solid var(--line);transition:border-color .15s}
+.faq details[open]{border-color:var(--accent)}
+.faq summary{cursor:pointer;padding:14px 16px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font:700 1.3rem/1 var(--font-display);color:var(--accent);transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq p{margin:0;padding:0 16px 16px;color:var(--muted)}
+.links{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:center;margin-bottom:8px}
+.links a{color:var(--accent);font-weight:600}
+@media (max-width:520px){.topright{width:100%;justify-content:space-between}}
+
 /* Toast */
 .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,120%);background:var(--shadow);color:#fff;padding:10px 18px;
   font:600 .9rem var(--font-body);transition:transform .25s;z-index:9}
@@ -162,13 +201,23 @@ footer{color:var(--muted);font-size:.85rem;text-align:center}
 </style>
 </head>
 <body>
-<div class="wrap">
+<a class="skip" href="#main">Skip to content</a>
+<div class="blocks" id="blocks" aria-hidden="true"></div>
+<noscript><p style="text-align:center;padding:12px">Server address: <b>pof.xubi.org</b> (Java Edition)</p></noscript>
+<div class="wrap" id="main">
   <header class="top">
     <div class="brand">
       <h1 id="srv-name">Pillars of Fortune</h1>
       <p id="srv-tag"></p>
+      <div class="cta">
+        <button class="btn primary big" type="button" data-copy="full">Copy server IP</button>
+        <a class="btn big ghost" id="cta-discord" href="#" target="_blank" rel="noopener">Join Discord</a>
+      </div>
     </div>
-    <div class="status" id="status" data-state="checking" role="status" aria-live="polite"><i></i><span id="status-text">Checking</span></div>
+    <div class="topright">
+      <button class="btn theme" id="theme" type="button" aria-label="Toggle light and dark theme">Theme</button>
+      <div class="status" id="status" data-state="checking" role="status" aria-live="polite"><i></i><span id="status-text">Checking</span></div>
+    </div>
   </header>
 
   <figure class="shot" id="shot" hidden aria-roledescription="carousel" aria-label="Server screenshots">
@@ -241,6 +290,16 @@ footer{color:var(--muted);font-size:.85rem;text-align:center}
     </ol>
   </section>
 
+  <section class="panel" aria-labelledby="h-faq">
+    <h2 id="h-faq">FAQ</h2>
+    <div class="faq">
+      <details><summary>Why does the server say Sleeping?</summary><p>The server shuts down when nobody is playing. Joining with the address above wakes it up. Starting takes about a minute, so keep trying and the page will switch to Online.</p></details>
+      <details><summary>Which Minecraft edition do I need?</summary><p>Java Edition. There is no Bedrock support. The exact version shows in the Players online panel while the server is running.</p></details>
+      <details><summary>How does a round work?</summary><p>Everyone spawns on their own bedrock pillar and receives a random item every few seconds. Use the items to fight, build and survive. The last player or team standing wins.</p></details>
+      <details><summary>Where can I get help or report problems?</summary><p>Ask in the Discord. Other players and staff can help, and server news is posted there.</p></details>
+    </div>
+  </section>
+
   <section class="panel discord" aria-labelledby="h-discord">
     <div>
       <h2 id="h-discord">Join our Discord</h2>
@@ -249,7 +308,10 @@ footer{color:var(--muted);font-size:.85rem;text-align:center}
     <a class="btn primary" id="discord-link" href="#" target="_blank" rel="noopener">Open Discord</a>
   </section>
 
-  <footer>Not affiliated with Mojang or Microsoft.</footer>
+  <footer>
+    <div class="links"><a id="f-discord" href="#" target="_blank" rel="noopener">Discord</a><a id="f-listing" href="#" target="_blank" rel="noopener">MCServerHost</a><a href="#main">Back to top</a></div>
+    Not affiliated with Mojang or Microsoft.
+  </footer>
 </div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -297,6 +359,7 @@ $("full").textContent = full;
 $("intro").textContent = CONFIG.intro;
 $("discord-link").href = CONFIG.discord;
 $("listing-link").href = CONFIG.listing;
+$("cta-discord").href = CONFIG.discord; $("f-discord").href = CONFIG.discord; $("f-listing").href = CONFIG.listing;
 /* Gallery carousel: preloads every image, drops any that fail, then rotates */
 (function () {
   const shot = $("shot"), stage = $("stage"), cap = $("cap"), dots = $("dots"), prog = $("prog");
@@ -363,6 +426,7 @@ CONFIG.modes.forEach(function (m) {
   tag.append(document.createTextNode(m.label));
   const h = document.createElement("h3"); h.textContent = m.name;
   const p = document.createElement("p"); p.textContent = m.text;
+  li.style.setProperty("--stripe", m.sides.length === 2 ? "linear-gradient(90deg,var(--lime) 50%,var(--purple) 50%)" : "var(--accent)");
   li.append(tag, h, p);
   $("modes").append(li);
 });
@@ -411,6 +475,7 @@ function render(state, o) {
   st.dataset.state = state;
   const labels = { online: "Online", sleeping: "Sleeping", unknown: "Status unavailable" };
   $("status-text").textContent = labels[state];
+  document.title = state === "online" ? "(" + o.online + ") " + CONFIG.name : CONFIG.name;
   const showLive = state === "online";
   $("live").hidden = !showLive;
   $("sleep").hidden = state !== "sleeping";
@@ -487,6 +552,42 @@ async function load() {
     busy = false; btn.disabled = false; btn.textContent = "Check now";
   }
 }
+
+/* Theme toggle (remembered, optional) */
+(function () {
+  const root = document.documentElement, btn = $("theme");
+  const cur = function () { return root.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); };
+  const label = function () { btn.textContent = cur() === "dark" ? "Light mode" : "Dark mode"; };
+  btn.addEventListener("click", function () {
+    const next = cur() === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("pof-theme", next); } catch (e) {}
+    label();
+  });
+  label();
+})();
+
+/* Floating background blocks */
+(function () {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const box = $("blocks"), cols = ["var(--lime)", "var(--purple)", "var(--accent)"];
+  for (let i = 0; i < 14; i++) {
+    const b = document.createElement("i"), sz = 14 + Math.random() * 26;
+    b.style.cssText = "left:" + Math.random() * 100 + "%;--s:" + sz + "px;--c:" + cols[i % 3] + ";--d:" + (22 + Math.random() * 26) + "s;--dl:-" + Math.random() * 40 + "s";
+    box.append(b);
+  }
+})();
+
+/* Scroll reveal */
+(function () {
+  const els = document.querySelectorAll(".grid > .panel, .wrap > .panel");
+  els.forEach(function (e) { e.classList.add("reveal"); });
+  if (!("IntersectionObserver" in window)) { els.forEach(function (e) { e.classList.add("in"); }); return; }
+  const io = new IntersectionObserver(function (en) {
+    en.forEach(function (x) { if (x.isIntersecting) { x.target.classList.add("in"); io.unobserve(x.target); } });
+  }, { threshold: 0.12 });
+  els.forEach(function (e, i) { e.style.transitionDelay = (i % 2) * 90 + "ms"; io.observe(e); });
+})();
 
 $("refresh").addEventListener("click", load);
 load();
